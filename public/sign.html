@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dokument unterzeichnen – Schweizer Finanz</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--navy:#0f1e35;--gold:#c9a84c;--cream:#f8f5ef;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);min-height:100vh;}
+header{background:var(--navy);padding:20px 40px;display:flex;align-items:center;gap:14px;}
+.logo{width:36px;height:36px;background:var(--gold);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:18px;color:var(--navy);font-weight:600;}
+header h1{font-family:'Playfair Display',serif;font-size:18px;color:#fff;}
+header p{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.08em;}
+main{max-width:800px;margin:40px auto;padding:0 24px 80px;}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(15,30,53,.1);overflow:hidden;margin-bottom:24px;}
+.card-header{padding:20px 28px;border-bottom:1px solid var(--cream);display:flex;align-items:center;gap:12px;}
+.card-icon{width:34px;height:34px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.card-title{font-family:'Playfair Display',serif;font-size:16px;}
+.card-body{padding:24px 28px;}
+.msg-box{background:var(--cream);border-radius:10px;padding:16px 20px;font-size:14px;color:#444;margin-bottom:0;line-height:1.6;}
+.pdf-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.pdf-nav button{background:var(--navy);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.pdf-nav button:disabled{background:#ede9e0;color:#7a7a8a;cursor:default;}
+.pdf-nav span{font-size:13px;color:#7a7a8a;flex:1;text-align:center;}
+#pdf-wrapper{border:1px solid #ede9e0;border-radius:8px;overflow:hidden;background:#fff;position:relative;}
+#pdf-canvas{display:block;width:100%;height:auto;}
+.sig-pad-wrap{position:relative;border:2px solid #ede9e0;border-radius:12px;overflow:hidden;background:#fff;cursor:crosshair;}
+.sig-pad-wrap::after{content:'Hier unterschreiben';position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:12px;color:rgba(0,0,0,0.12);font-style:italic;pointer-events:none;white-space:nowrap;}
+#sig-line{position:absolute;bottom:44px;left:40px;right:40px;height:1px;background:rgba(0,0,0,0.08);pointer-events:none;}
+#sig-canvas{display:block;width:100%;height:150px;touch-action:none;}
+.sig-tools{display:flex;gap:10px;margin-top:10px;align-items:center;}
+.sig-tools label{font-size:12px;color:#7a7a8a;}
+.sig-tools input[type=range]{width:80px;accent-color:var(--navy);}
+.spacer{flex:1;}
+.btn-clear{background:transparent;border:1px solid #ede9e0;color:#7a7a8a;padding:7px 16px;border-radius:7px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-clear:hover{border-color:#c0392b;color:#c0392b;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:500;color:#7a7a8a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.field input{width:100%;padding:10px 14px;border:1px solid #ede9e0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--cream);}
+.field input:focus{border-color:var(--navy);background:#fff;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.btn-finish{width:100%;background:var(--navy);color:#fff;border:none;padding:15px;border-radius:10px;font-family:'Playfair Display',serif;font-size:17px;cursor:pointer;margin-top:8px;transition:.2s;display:flex;align-items:center;justify-content:center;gap:10px;}
+.btn-finish:hover{background:#1a2f4a;}
+.btn-finish:disabled{background:#ede9e0;color:#7a7a8a;cursor:default;}
+#success{display:none;text-align:center;padding:60px 28px;}
+.success-icon{width:64px;height:64px;background:linear-gradient(135deg,#2d8a4e,#3aad64);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;box-shadow:0 8px 24px rgba(45,138,78,.3);}
+#success h2{font-family:'Playfair Display',serif;font-size:24px;color:var(--navy);margin-bottom:10px;}
+#success p{color:#7a7a8a;font-size:14px;line-height:1.6;}
+.loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">S</div>
+  <div><h1>Schweizer Finanz</h1><p>Digitale Unterschrift</p></div>
+</header>
+<main id="main-content">
+  <div class="card" id="card-msg" style="display:none">
+    <div class="card-header"><div class="card-icon">💬</div><div class="card-title">Nachricht</div></div>
+    <div class="card-body"><div class="msg-box" id="msg-text"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-icon">📄</div><div class="card-title" id="doc-title">Dokument</div></div>
+    <div class="card-body">
+      <div class="pdf-nav">
+        <button id="prev-page" disabled>← Zurück</button>
+        <span id="page-info">Seite 1 von 1</span>
+        <button id="next-page" disabled>Weiter →</button>
+      </div>
+      <div id="pdf-wrapper"><canvas id="pdf-canvas"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-icon">👤</div><div class="card-title">Ihre Angaben</div></div>
+    <div class="card-body">
+      <div class="grid2">
+        <div class="field"><label>Vorname</label><input type="text" id="fname" placeholder="Max"></div>
+        <div class="field"><label>Nachname</label><input type="text" id="lname" placeholder="Mustermann"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Ort</label><input type="text" id="city" placeholder="Emmendingen"></div>
+        <div class="field"><label>Datum</label><input type="text" id="sig-date" readonly></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-icon">✍️</div><div class="card-title">Unterschrift</div></div>
+    <div class="card-body">
+      <div class="sig-pad-wrap"><canvas id="sig-canvas"></canvas><div id="sig-line"></div></div>
+      <div class="sig-tools">
+        <label>Stärke</label><input type="range" id="sig-width" min="1" max="6" value="2.5" step="0.5">
+        <div class="spacer"></div>
+        <button class="btn-clear" id="btn-clear">Löschen</button>
+      </div>
+      <button class="btn-finish" id="btn-finish" disabled>Jetzt verbindlich unterzeichnen</button>
+    </div>
+  </div>
+  <div class="card" id="success">
+    <div class="success-icon">✓</div>
+    <h2>Erfolgreich unterzeichnet</h2>
+    <p>Vielen Dank! Ihr unterzeichnetes Dokument wurde übermittelt.<br>Schweizer Finanz wird sich bei Ihnen melden.</p>
+  </div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const {jsPDF}=window.jspdf;
+const id=location.pathname.split('/').pop();
+document.getElementById('sig-date').value=new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+let pdfDoc=null,currentPage=1,totalPages=1;
+const pdfCanvas=document.getElementById('pdf-canvas');
+const ctx=pdfCanvas.getContext('2d');
+
+async function init(){
+  const r=await fetch('/api/session/'+id);
+  const s=await r.json();
+  if(s.message){document.getElementById('msg-text').textContent=s.message;document.getElementById('card-msg').style.display='block';}
+  document.getElementById('doc-title').textContent=s.originalName||'Dokument';
+  if(s.clientName)document.getElementById('fname').value=s.clientName.split(' ')[0]||'';
+
+  const pdfR=await fetch('/api/pdf/'+id);
+  const buf=await pdfR.arrayBuffer();
+  pdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+  totalPages=pdfDoc.numPages;
+  await renderPage(1);
+  document.getElementById('next-page').disabled=totalPages<=1;
+}
+
+async function renderPage(n){
+  const page=await pdfDoc.getPage(n);
+  const wrapper=document.getElementById('pdf-wrapper');
+  const scale=wrapper.clientWidth/page.getViewport({scale:1}).width;
+  const vp=page.getViewport({scale});
+  pdfCanvas.width=vp.width;pdfCanvas.height=vp.height;
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  document.getElementById('page-info').textContent=`Seite ${n} von ${totalPages}`;
+  document.getElementById('prev-page').disabled=n<=1;
+  document.getElementById('next-page').disabled=n>=totalPages;
+}
+
+document.getElementById('prev-page').onclick=async()=>{if(currentPage>1){currentPage--;await renderPage(currentPage);}};
+document.getElementById('next-page').onclick=async()=>{if(currentPage<totalPages){currentPage++;await renderPage(currentPage);}};
+
+const sigCanvas=document.getElementById('sig-canvas');
+const sigCtx=sigCanvas.getContext('2d');
+let drawing=false,hasSig=false;
+
+function resizeSig(){
+  const w=sigCanvas.parentElement.clientWidth;
+  sigCanvas.width=w*devicePixelRatio;sigCanvas.height=150*devicePixelRatio;
+  sigCanvas.style.width=w+'px';sigCanvas.style.height='150px';
+  sigCtx.scale(devicePixelRatio,devicePixelRatio);
+}
+resizeSig();window.addEventListener('resize',resizeSig);
+
+function getPos(e,c){const r=c.getBoundingClientRect();const s=e.touches?e.touches[0]:e;return{x:s.clientX-r.left,y:s.clientY-r.top};}
+sigCanvas.addEventListener('mousedown',e=>{drawing=true;const p=getPos(e,sigCanvas);sigCtx.beginPath();sigCtx.moveTo(p.x,p.y);e.preventDefault();});
+sigCanvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=getPos(e,sigCanvas);sigCtx.lineTo(p.x,p.y);sigCtx.strokeStyle='#0f1e35';sigCtx.lineWidth=parseFloat(document.getElementById('sig-width').value);sigCtx.lineCap='round';sigCtx.lineJoin='round';sigCtx.stroke();hasSig=true;document.getElementById('btn-finish').disabled=false;e.preventDefault();});
+sigCanvas.addEventListener('mouseup',()=>drawing=false);
+sigCanvas.addEventListener('touchstart',e=>{drawing=true;const p=getPos(e,sigCanvas);sigCtx.beginPath();sigCtx.moveTo(p.x,p.y);e.preventDefault();},{passive:false});
+sigCanvas.addEventListener('touchmove',e=>{if(!drawing)return;const p=getPos(e,sigCanvas);sigCtx.lineTo(p.x,p.y);sigCtx.strokeStyle='#0f1e35';sigCtx.lineWidth=parseFloat(document.getElementById('sig-width').value);sigCtx.lineCap='round';sigCtx.lineJoin='round';sigCtx.stroke();hasSig=true;document.getElementById('btn-finish').disabled=false;e.preventDefault();},{passive:false});
+sigCanvas.addEventListener('touchend',()=>drawing=false);
+document.getElementById('btn-clear').onclick=()=>{sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);hasSig=false;document.getElementById('btn-finish').disabled=true;};
+
+document.getElementById('btn-finish').onclick=async()=>{
+  if(!hasSig)return;
+  const btn=document.getElementById('btn-finish');
+  btn.disabled=true;btn.innerHTML='<div class="loader"></div> Wird übermittelt...';
+  const fname=document.getElementById('fname').value.trim();
+  const lname=document.getElementById('lname').value.trim();
+  const city=document.getElementById('city').value.trim();
+  const date=document.getElementById('sig-date').value;
+  const sigData=sigCanvas.toDataURL('image/png');
+
+  const page=await pdfDoc.getPage(totalPages);
+  const vp=page.getViewport({scale:1});
+  const pW=vp.width,pH=vp.height;
+  const wrapper=document.getElementById('pdf-wrapper');
+  const rW=wrapper.clientWidth,rH=pdfCanvas.offsetHeight;
+  const doc=new jsPDF({orientation:pW>pH?'l':'p',unit:'pt',format:[pW,pH]});
+
+  for(let p=1;p<=totalPages;p++){
+    if(p>1)doc.addPage([pW,pH]);
+    const pg=await pdfDoc.getPage(p);
+    const v=pg.getViewport({scale:2});
+    const tmp=document.createElement('canvas');tmp.width=v.width;tmp.height=v.height;
+    await pg.render({canvasContext:tmp.getContext('2d'),viewport:v}).promise;
+    doc.addImage(tmp.toDataURL('image/jpeg',.92),'JPEG',0,0,pW,pH);
+    if(p===totalPages){
+      const sX=40,sY=pH-100,sW=200,sH=60;
+      doc.addImage(sigData,'PNG',sX,sY,sW,sH);
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(80,80,80);
+      doc.text(`${fname} ${lname}${city?', '+city:''}  |  ${date}`,sX,sY+sH+10);
+    }
+  }
+
+  const b64=doc.output('datauristring').split(',')[1];
+  await fetch('/api/sign/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signedPdfBase64:b64,signerName:`${fname} ${lname}`,signerCity:city})});
+
+  document.querySelectorAll('.card').forEach(c=>c.style.display='none');
+  document.getElementById('success').style.display='block';
+};
+
+init();
+</script>
+</body>
+</html>

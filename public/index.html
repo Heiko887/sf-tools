@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SF Tools – Signatur</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--navy:#0f1e35;--gold:#c9a84c;--cream:#f8f5ef;--white:#ffffff;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);min-height:100vh;}
+header{background:var(--navy);padding:20px 40px;display:flex;align-items:center;gap:14px;}
+.logo{width:36px;height:36px;background:var(--gold);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:18px;color:var(--navy);font-weight:600;}
+header h1{font-family:'Playfair Display',serif;font-size:18px;color:#fff;}
+header p{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.08em;}
+main{max-width:680px;margin:48px auto;padding:0 24px;}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(15,30,53,.1);overflow:hidden;margin-bottom:24px;}
+.card-header{padding:20px 28px;border-bottom:1px solid var(--cream);display:flex;align-items:center;gap:12px;}
+.card-icon{width:34px;height:34px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.card-title{font-family:'Playfair Display',serif;font-size:16px;}
+.card-body{padding:24px 28px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:500;color:#7a7a8a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.field input,.field textarea{width:100%;padding:10px 14px;border:1px solid #ede9e0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--cream);}
+.field input:focus,.field textarea:focus{border-color:var(--navy);background:#fff;}
+.field textarea{height:80px;resize:vertical;}
+.drop{border:2px dashed #ede9e0;border-radius:10px;padding:36px;text-align:center;cursor:pointer;transition:.2s;}
+.drop:hover{border-color:var(--gold);}
+.drop h3{font-family:'Playfair Display',serif;font-size:16px;margin-bottom:6px;}
+.drop p{font-size:13px;color:#7a7a8a;}
+.btn{width:100%;background:var(--navy);color:#fff;border:none;padding:14px;border-radius:10px;font-family:'Playfair Display',serif;font-size:16px;cursor:pointer;margin-top:8px;transition:.2s;}
+.btn:hover{background:#1a2f4a;}
+.btn:disabled{background:#ede9e0;color:#7a7a8a;cursor:default;}
+.result{display:none;margin-top:20px;padding:20px;background:#f0faf4;border-radius:10px;border:1px solid #b7e4c7;}
+.result h3{color:#2d6a4f;font-family:'Playfair Display',serif;margin-bottom:8px;}
+.link-box{background:#fff;padding:12px 16px;border-radius:8px;font-size:13px;word-break:break-all;border:1px solid #b7e4c7;margin:10px 0;}
+.copy-btn{background:var(--gold);color:var(--navy);border:none;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">S</div>
+  <div><h1>SF Tools</h1><p>Schweizer Finanz · Signatur</p></div>
+</header>
+<main>
+  <div class="card">
+    <div class="card-header"><div class="card-icon">📤</div><div><div class="card-title">Dokument zur Unterschrift senden</div></div></div>
+    <div class="card-body">
+      <div class="field"><label>Kundenname</label><input type="text" id="clientName" placeholder="Max Mustermann"></div>
+      <div class="field"><label>Nachricht an Kunden (optional)</label><textarea id="message" placeholder="Bitte unterzeichnen Sie das beigefügte Dokument..."></textarea></div>
+      <div class="field"><label>PDF-Dokument</label>
+        <div class="drop" id="drop" onclick="document.getElementById('pdfInput').click()">
+          <div style="font-size:32px;margin-bottom:8px">📄</div>
+          <h3 id="drop-title">PDF hier ablegen oder klicken</h3>
+          <p id="drop-sub">Nur PDF-Dateien</p>
+          <input type="file" id="pdfInput" accept="application/pdf" style="display:none">
+        </div>
+      </div>
+      <button class="btn" id="sendBtn" disabled>🔗 Signatur-Link erstellen</button>
+      <div class="result" id="result">
+        <h3>✅ Link erstellt!</h3>
+        <p style="font-size:13px;color:#555;margin-bottom:8px">Diesen Link an den Kunden senden:</p>
+        <div class="link-box" id="linkBox"></div>
+        <button class="copy-btn" onclick="copyLink()">📋 Link kopieren</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+let selectedFile=null;
+document.getElementById('pdfInput').addEventListener('change',e=>{
+  selectedFile=e.target.files[0];
+  if(selectedFile){
+    document.getElementById('drop-title').textContent=selectedFile.name;
+    document.getElementById('drop-sub').textContent=(selectedFile.size/1024/1024).toFixed(2)+' MB';
+    document.getElementById('sendBtn').disabled=false;
+  }
+});
+const drop=document.getElementById('drop');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.borderColor='#c9a84c';});
+drop.addEventListener('dragleave',()=>drop.style.borderColor='');
+drop.addEventListener('drop',e=>{
+  e.preventDefault();drop.style.borderColor='';
+  const f=e.dataTransfer.files[0];
+  if(f&&f.type==='application/pdf'){
+    selectedFile=f;
+    document.getElementById('drop-title').textContent=f.name;
+    document.getElementById('drop-sub').textContent=(f.size/1024/1024).toFixed(2)+' MB';
+    document.getElementById('sendBtn').disabled=false;
+  }
+});
+document.getElementById('sendBtn').addEventListener('click',async()=>{
+  if(!selectedFile)return;
+  const btn=document.getElementById('sendBtn');
+  btn.disabled=true;btn.textContent='⏳ Wird erstellt...';
+  const fd=new FormData();
+  fd.append('pdf',selectedFile);
+  fd.append('clientName',document.getElementById('clientName').value||'Kunde');
+  fd.append('message',document.getElementById('message').value||'');
+  try{
+    const r=await fetch('/api/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    document.getElementById('linkBox').textContent=d.link;
+    document.getElementById('result').style.display='block';
+    btn.textContent='✅ Link erstellt';
+  }catch(e){
+    alert('Fehler: '+e.message);
+    btn.disabled=false;btn.textContent='🔗 Signatur-Link erstellen';
+  }
+});
+function copyLink(){
+  navigator.clipboard.writeText(document.getElementById('linkBox').textContent);
+  const b=document.querySelector('.copy-btn');b.textContent='✅ Kopiert!';
+  setTimeout(()=>b.textContent='📋 Link kopieren',2000);
+}
+</script>
+</body>
+</html>
