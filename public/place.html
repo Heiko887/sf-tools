@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SF Tools – Felder platzieren</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--navy:#0f1e35;--gold:#c9a84c;--cream:#f8f5ef;--cream-dark:#ede9e0;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);min-height:100vh;}
+header{background:var(--navy);padding:20px 40px;display:flex;align-items:center;gap:14px;}
+.logo{width:36px;height:36px;background:var(--gold);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:18px;color:var(--navy);font-weight:600;}
+header h1{font-family:'Playfair Display',serif;font-size:18px;color:#fff;}
+header p{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.08em;}
+main{max-width:900px;margin:40px auto;padding:0 24px 80px;}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(15,30,53,.1);overflow:hidden;margin-bottom:24px;}
+.card-header{padding:20px 28px;border-bottom:1px solid var(--cream-dark);display:flex;align-items:center;gap:12px;}
+.card-icon{width:34px;height:34px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.card-title{font-family:'Playfair Display',serif;font-size:16px;}
+.card-subtitle{font-size:12px;color:#7a7a8a;margin-top:2px;}
+.card-body{padding:24px 28px;}
+.drop{border:2px dashed var(--cream-dark);border-radius:10px;padding:36px;text-align:center;cursor:pointer;transition:.2s;background:var(--cream);}
+.drop:hover{border-color:var(--gold);}
+.drop h3{font-family:'Playfair Display',serif;font-size:16px;margin-bottom:6px;}
+.drop p{font-size:13px;color:#7a7a8a;}
+.pdf-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.pdf-nav button{background:var(--navy);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.pdf-nav button:disabled{background:var(--cream-dark);color:#7a7a8a;cursor:default;}
+.pdf-nav span{font-size:13px;color:#7a7a8a;flex:1;text-align:center;}
+#pdf-wrapper{position:relative;border:1px solid var(--cream-dark);border-radius:8px;overflow:hidden;background:#fff;user-select:none;}
+#pdf-canvas{display:block;width:100%;height:auto;}
+.sig-field{position:absolute;border:2px dashed;border-radius:4px;cursor:move;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;min-width:80px;min-height:36px;}
+.sig-field.confirmed{border-style:solid;border-color:#2d8a4e!important;background:rgba(45,138,78,0.08)!important;cursor:default;}
+.sig-field .field-label{font-size:10px;font-weight:500;pointer-events:none;text-align:center;padding:0 4px;}
+.sig-field.confirmed .field-label{color:#2d8a4e!important;}
+.sig-field .field-delete{position:absolute;top:-10px;right:-10px;width:26px;height:26px;background:#c0392b;border-radius:50%;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:all;}
+.sig-field.confirmed .field-delete,.sig-field.confirmed .field-resize{display:none!important;}
+.sig-field .field-resize{position:absolute;bottom:-8px;right:-8px;width:24px;height:24px;border-radius:4px;cursor:se-resize;pointer-events:all;}
+.signer-bar{display:flex;align-items:center;gap:12px;background:var(--cream);border-radius:10px;padding:12px 16px;margin-bottom:10px;border-left:4px solid var(--navy);}
+.signer-name{font-size:13px;font-weight:500;}
+.btn-add-field{color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;}
+.counter-pill{background:rgba(255,255,255,0.2);border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}
+.btn-add-signer{width:100%;background:var(--cream);color:var(--navy);border:1px dashed var(--cream-dark);padding:10px;border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:16px;transition:.2s;}
+.btn-add-signer:hover{border-color:var(--gold);}
+.btn-confirm{width:100%;background:#2d8a4e;color:#fff;border:none;padding:14px;border-radius:10px;font-family:'Playfair Display',serif;font-size:16px;cursor:pointer;margin-top:16px;transition:.2s;}
+.btn-confirm:hover{background:#246840;}
+.field-row{margin-bottom:14px;}
+.field-row label{display:block;font-size:12px;font-weight:500;color:#7a7a8a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.field-row input,.field-row textarea{width:100%;padding:10px 14px;border:1px solid var(--cream-dark);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--cream);}
+.field-row input:focus,.field-row textarea:focus{border-color:var(--navy);background:#fff;}
+.field-row textarea{height:100px;resize:vertical;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.send-card{background:var(--cream);border-radius:10px;padding:16px;margin-bottom:14px;border-left:4px solid var(--navy);}
+.send-card-title{font-size:13px;font-weight:500;margin-bottom:12px;}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+.btn-email{color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-link-only{background:#fff;border:1px solid var(--cream-dark);padding:11px;border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--navy);}
+.link-result{display:none;margin-top:10px;padding:10px 14px;background:#f0faf4;border-radius:8px;border:1px solid #b7e4c7;font-size:12px;word-break:break-all;}
+
+/* ── Mobile ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  header{padding:14px 16px;}
+  header h1{font-size:15px;}
+  header p{font-size:10px;}
+  main{padding:0 12px 60px;}
+  .card-body{padding:16px;}
+  .card-header{padding:14px 16px;}
+  .signer-bar{flex-wrap:wrap;gap:8px;padding:10px 12px;}
+  .signer-name{font-size:13px;min-width:0;flex-shrink:1;}
+  .btn-add-field{font-size:12px;padding:6px 10px;flex-shrink:0;}
+  .counter-pill{width:18px;height:18px;font-size:11px;}
+  .btn-add-signer{font-size:12px;padding:8px;}
+  .btn-confirm{font-size:14px;padding:12px;}
+  .pdf-nav button{padding:6px 10px;font-size:12px;}
+  .pdf-nav span{font-size:12px;}
+  .grid2{grid-template-columns:1fr;}
+  .btn-row{grid-template-columns:1fr;}
+  .send-card{padding:12px;}
+  .btn-email,.btn-link-only{padding:10px;font-size:13px;}
+  .sig-field .field-label{font-size:9px;}
+  #drop-compact{padding:10px 14px;}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">S</div>
+  <div><h1>SF Tools</h1><p>Schweizer Finanz · Signaturfelder platzieren</p></div>
+</header>
+<main>
+
+  <div class="card" id="card-upload" style="overflow:hidden">
+    <div id="drop-full" style="padding:24px 28px">
+      <div class="drop" id="drop" onclick="document.getElementById('pdf-input').click()">
+        <div style="font-size:32px;margin-bottom:8px">📂</div>
+        <h3>PDF hier ablegen oder klicken</h3>
+        <p>Nur PDF-Dateien</p>
+        <input type="file" id="pdf-input" accept="application/pdf" style="display:none">
+      </div>
+    </div>
+    <div id="drop-compact" style="display:none;padding:12px 20px;align-items:center;gap:12px;cursor:pointer;" onclick="document.getElementById('pdf-input').click()">
+      <div style="width:34px;height:34px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📄</div>
+      <span id="pdf-name" style="font-size:14px;font-weight:500;color:var(--navy);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'Playfair Display',serif"></span>
+      <span style="font-size:12px;color:#7a7a8a;background:var(--cream);padding:4px 10px;border-radius:6px">Ändern</span>
+    </div>
+  </div>
+
+  <div class="card" id="card-place" style="display:none">
+    <div class="card-header" id="place-header"><div class="card-icon">✍️</div><div style="flex:1"><div class="card-title">Unterschriftsfelder platzieren</div><div class="card-subtitle" id="place-subtitle">Mehrere Unterzeichner möglich</div></div><button id="place-change-btn" onclick="reopenPlace()" style="display:none;margin-left:auto;font-size:12px;color:#7a7a8a;background:var(--cream);padding:4px 10px;border-radius:6px;border:none;cursor:pointer;white-space:nowrap">Ändern</button></div>
+    <div class="card-body" id="place-body">
+      <div id="signers-wrap"></div>
+      <button class="btn-add-signer" onclick="addSigner()">➕ Weiteren Unterzeichner hinzufügen</button>
+      <div class="pdf-nav">
+        <button id="btn-prev" disabled onclick="prevPage()">← Zurück</button>
+        <span id="page-info">Seite 1 von 1</span>
+        <button id="btn-next" disabled onclick="nextPage()">Weiter →</button>
+      </div>
+      <div id="pdf-wrapper"><canvas id="pdf-canvas"></canvas></div>
+      <button class="btn-confirm" onclick="confirmAll()">✅ Alle Felder bestätigen & weiter</button>
+    </div>
+  </div>
+
+  <div class="card" id="card-send" style="display:none">
+    <div class="card-header"><div class="card-icon">📤</div><div><div class="card-title">Links erstellen & senden</div><div class="card-subtitle">Pro Unterzeichner ein eigener Link</div></div></div>
+    <div class="card-body">
+      <div id="send-cards"></div>
+    </div>
+  </div>
+
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let pdfDoc=null,pdfBytes=null,currentPage=1,totalPages=1,pdfW=0,pdfH=0;
+let allFields=[],fieldCounter=0,signers=[],signerCounter=0;
+const SCOLORS=['#0f1e35','#1a6b3a','#7b3fa0','#b34700','#005f73'];
+const canvas=document.getElementById('pdf-canvas');
+const ctx=canvas.getContext('2d');
+const wrapper=document.getElementById('pdf-wrapper');
+
+// ── PDF ───────────────────────────────────────────────────────
+document.getElementById('pdf-input').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    pdfBytes=ev.target.result;
+    pdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(pdfBytes)}).promise;
+    totalPages=pdfDoc.numPages;
+    document.getElementById('pdf-name').textContent=file.name;
+    document.getElementById('drop-full').style.display='none';
+    document.getElementById('drop-compact').style.display='flex';
+    document.getElementById('card-place').style.display='block';
+    await renderPage(1);
+    addSigner();
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+const drop=document.getElementById('drop');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.borderColor='#c9a84c';});
+drop.addEventListener('dragleave',()=>drop.style.borderColor='');
+drop.addEventListener('drop',e=>{
+  e.preventDefault();drop.style.borderColor='';
+  const f=e.dataTransfer.files[0];
+  if(f&&f.type==='application/pdf'){
+    const dt=new DataTransfer();dt.items.add(f);
+    document.getElementById('pdf-input').files=dt.files;
+    document.getElementById('pdf-input').dispatchEvent(new Event('change'));
+  }
+});
+
+async function renderPage(n){
+  const page=await pdfDoc.getPage(n);
+  const vp0=page.getViewport({scale:1});
+  pdfW=vp0.width;pdfH=vp0.height;
+  const scale=wrapper.clientWidth/vp0.width;
+  const vp=page.getViewport({scale});
+  canvas.width=vp.width;canvas.height=vp.height;
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  document.getElementById('page-info').textContent='Seite '+n+' von '+totalPages;
+  document.getElementById('btn-prev').disabled=n<=1;
+  document.getElementById('btn-next').disabled=n>=totalPages;
+  currentPage=n;
+  allFields.forEach(f=>{f.el.style.display=f.page===currentPage?'flex':'none';});
+}
+function prevPage(){if(currentPage>1)renderPage(currentPage-1);}
+function nextPage(){if(currentPage<totalPages)renderPage(currentPage+1);}
+
+// ── Signers ───────────────────────────────────────────────────
+function addSigner(){
+  signerCounter++;
+  const sid='s'+signerCounter;
+  const color=SCOLORS[(signerCounter-1)%SCOLORS.length];
+  const signer={id:sid,num:signerCounter,name:'Unterzeichner '+signerCounter,color,fields:[]};
+  signers.push(signer);
+
+  const bar=document.createElement('div');
+  bar.className='signer-bar';
+  bar.id='bar-'+sid;
+  bar.style.borderLeftColor=color;
+  bar.innerHTML=
+    `<span class="signer-name" id="sname-${sid}" style="color:${color}">Unterzeichner ${signer.num}</span>`+
+    `<button onclick="renameSigner('${sid}')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 4px;line-height:1" title="Umbenennen">✏️</button>`+
+    `<button class="btn-add-field" style="background:${color}" onclick="addField('${sid}')">➕ Unterschrift <span class="counter-pill" id="counter-${sid}">0</span> hinzufügen</button>`+
+    (signerCounter>1?`<button onclick="removeSigner('${sid}')" style="margin-left:auto;background:transparent;border:1px solid #c0392b;color:#c0392b;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">Entfernen</button>`:'');
+
+  document.getElementById('signers-wrap').appendChild(bar);
+  addField(sid);
+}
+
+function renameSigner(sid){
+  const signer=signers.find(s=>s.id===sid);if(!signer)return;
+  const span=document.getElementById('sname-'+sid);if(!span)return;
+  // Switch to input
+  const input=document.createElement('input');
+  input.value=signer.name||'Unterzeichner '+signer.num;
+  input.style.cssText='font-size:13px;font-weight:500;color:'+signer.color+';border:none;border-bottom:2px solid '+signer.color+';background:transparent;outline:none;width:120px;font-family:DM Sans,sans-serif;';
+  span.replaceWith(input);
+  input.focus();input.select();
+
+  function applyName(){
+    const newName=input.value.trim()||'Unterzeichner '+signer.num;
+    signer.name=newName;
+    const newSpan=document.createElement('span');
+    newSpan.className='signer-name';
+    newSpan.id='sname-'+sid;
+    newSpan.style.cssText='color:'+signer.color;
+    newSpan.textContent=newName;
+    input.replaceWith(newSpan);
+    // Update field labels
+    signer.fields.forEach((f,i)=>{
+      f.label=newName+'_Unterschrift_'+(i+1);
+      const lel=f.el.querySelector('.field-label');
+      if(lel)lel.textContent=(f.confirmed?'✔ ':'✍ ')+f.label;
+    });
+    const sc=document.getElementById('sctitle-'+sid);
+    if(sc)sc.textContent=newName+' · '+signer.fields.length+' Felder';
+    updateMessage();
+  }
+
+  input.addEventListener('blur',applyName);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')input.blur();if(e.key==='Escape'){input.value=signer.name;input.blur();}});
+}
+
+function removeSigner(sid){
+  const idx=signers.findIndex(s=>s.id===sid);if(idx<0)return;
+  signers[idx].fields.forEach(f=>{f.el.remove();});
+  allFields=allFields.filter(f=>f.signerId!==sid);
+  signers.splice(idx,1);
+  document.getElementById('bar-'+sid).remove();
+  updateMessage();
+}
+
+// ── Fields ────────────────────────────────────────────────────
+function addField(sid){
+  const signer=signers.find(s=>s.id===sid);if(!signer)return;
+  fieldCounter++;
+  const num=signer.fields.length+1;
+  const color=signer.color;
+  const onPage=allFields.filter(f=>f.page===currentPage).length;
+  const x=40,y=Math.max(10,canvas.offsetHeight-130-onPage*80),w=200,h=65;
+  const fid='f'+fieldCounter;
+  const label=(signer.name||'Unterzeichner '+signer.num)+'_Unterschrift_'+num;
+
+  const el=document.createElement('div');
+  el.className='sig-field';el.id=fid;
+  el.style.cssText=`left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-color:${color};background:${rgba(color,.08)}`;
+
+  const lbl=document.createElement('span');lbl.className='field-label';
+  lbl.textContent='✍ '+label;lbl.style.color=color;
+
+  const del=document.createElement('div');del.className='field-delete';
+  del.textContent='✕';del.onclick=()=>removeField(fid,sid);
+
+  const res=document.createElement('div');res.className='field-resize';res.style.background=color;
+
+  el.appendChild(lbl);el.appendChild(del);el.appendChild(res);
+  wrapper.appendChild(el);
+
+  const field={id:fid,label,signerId:sid,page:currentPage,el,x,y,w,h,color,confirmed:false};
+  allFields.push(field);signer.fields.push(field);
+  drag(field,res);
+  document.getElementById('counter-'+sid).textContent=signer.fields.length;
+  updateMessage();
+}
+
+function removeField(fid,sid){
+  const f=allFields.find(f=>f.id===fid);
+  if(f){f.el.remove();allFields=allFields.filter(f=>f.id!==fid);}
+  const s=signers.find(s=>s.id===sid);
+  if(s){
+    s.fields=s.fields.filter(f=>f.id!==fid);
+    s.fields.forEach((f,i)=>{
+      f.label=(s.name||'Unterzeichner '+s.num)+'_Unterschrift_'+(i+1);
+      f.el.querySelector('.field-label').textContent=(f.confirmed?'✔ ':'✍ ')+f.label;
+    });
+    document.getElementById('counter-'+sid).textContent=s.fields.length;
+  }
+  updateMessage();
+}
+
+function rgba(hex,a){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ── Drag ──────────────────────────────────────────────────────
+function drag(field,res){
+  let dr=false,rz=false,dX,dY,rX,rY,rW,rH;
+  field.el.addEventListener('mousedown',e=>{
+    if(field.confirmed||e.target===res||e.target.className==='field-delete')return;
+    dr=true;dX=e.clientX-field.x;dY=e.clientY-field.y;e.preventDefault();
+  });
+  res.addEventListener('mousedown',e=>{
+    if(field.confirmed)return;
+    rz=true;rX=e.clientX;rY=e.clientY;rW=field.w;rH=field.h;e.stopPropagation();e.preventDefault();
+  });
+  res.addEventListener('touchstart',e=>{
+    if(field.confirmed)return;
+    rz=true;rX=e.touches[0].clientX;rY=e.touches[0].clientY;rW=field.w;rH=field.h;e.stopPropagation();e.preventDefault();
+  },{passive:false});
+  document.addEventListener('mousemove',e=>{
+    if(dr){
+      field.x=Math.max(0,Math.min(e.clientX-dX,wrapper.clientWidth-field.w));
+      field.y=Math.max(0,Math.min(e.clientY-dY,canvas.offsetHeight-field.h));
+      field.el.style.left=field.x+'px';field.el.style.top=field.y+'px';
+    }
+    if(rz){
+      field.w=Math.max(80,rW+(e.clientX-rX));field.h=Math.max(36,rH+(e.clientY-rY));
+      field.el.style.width=field.w+'px';field.el.style.height=field.h+'px';
+    }
+  });
+  document.addEventListener('mouseup',()=>{dr=false;rz=false;});
+  field.el.addEventListener('touchstart',e=>{
+    if(field.confirmed||e.target===res)return;
+    dr=true;dX=e.touches[0].clientX-field.x;dY=e.touches[0].clientY-field.y;e.preventDefault();
+  },{passive:false});
+  document.addEventListener('touchmove',e=>{
+    if(dr){
+      field.x=Math.max(0,Math.min(e.touches[0].clientX-dX,wrapper.clientWidth-field.w));
+      field.y=Math.max(0,Math.min(e.touches[0].clientY-dY,canvas.offsetHeight-field.h));
+      field.el.style.left=field.x+'px';field.el.style.top=field.y+'px';
+    }
+    if(rz){
+      field.w=Math.max(80,rW+(e.touches[0].clientX-rX));
+      field.h=Math.max(36,rH+(e.touches[0].clientY-rY));
+      field.el.style.width=field.w+'px';field.el.style.height=field.h+'px';
+    }
+  },{passive:false});
+  document.addEventListener('touchend',()=>{dr=false;rz=false;});
+}
+
+// ── Message ───────────────────────────────────────────────────
+function updateMessage(){
+  signers.forEach(s=>{
+    const el=document.getElementById('message-'+s.id);
+    if(!el||el.value)return;
+    const name=s.name||'Unterzeichner '+s.num;
+    const n=s.fields.length;
+    const mal=n===1?'einmal':n+'x';
+    el.value='Liebe/r '+name+',\n\nbitte unterzeichnen Sie das beigefügte Dokument '+mal+'.\n\nVielen Dank für Ihre Zusammenarbeit.\n\nMit freundlichen Grüßen\nSchweizer Finanz';
+  });
+}
+
+async function generateAIMessage(sid){
+  const s=signers.find(s=>s.id===sid);if(!s)return;
+  const el=document.getElementById('message-'+s.id);if(!el)return;
+  const btn=document.getElementById('ai-btn-'+sid);
+  if(btn){btn.disabled=true;btn.textContent='⏳ Wird generiert...';}
+
+  const name=s.name||'Unterzeichner '+s.num;
+  const n=s.fields.length;
+  const mal=n===1?'einmal':n+' Mal';
+
+  // Extract PDF text for context
+  let pdfText='';
+  if(pdfDoc){
+    try{
+      for(let i=1;i<=Math.min(totalPages,3);i++){
+        const page=await pdfDoc.getPage(i);
+        const tc=await page.getTextContent();
+        pdfText+=tc.items.map(item=>item.str).join(' ')+' ';
+      }
+      pdfText=pdfText.slice(0,1500).trim();
+    }catch(e){}
+  }
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:400,
+        messages:[{
+          role:'user',
+          content:'Du bist Assistent bei Schweizer Finanz, einem Versicherungsmakler. Schreibe eine kurze, professionelle E-Mail auf Deutsch an "'+name+'" mit der Bitte, das folgende Dokument '+mal+' zu unterschreiben. Beziehe dich kurz auf den Inhalt des Dokuments. Beginne mit "Liebe/r '+name+'," und beende mit "Mit freundlichen Grüßen\nSchweizer Finanz". Nur den E-Mail Text, keine Betreffzeile. Dokumentinhalt: '+pdfText
+        }]
+      })
+    });
+    const data=await resp.json();
+    const text=data.content?.[0]?.text||'';
+    if(text)el.value=text;
+  }catch(e){
+    console.error(e);
+  }
+  if(btn){btn.disabled=false;btn.textContent='✨ KI-Vorschlag';}
+}
+
+// ── Confirm ───────────────────────────────────────────────────
+function confirmAll(){
+  if(allFields.length===0){alert('Bitte mindestens ein Unterschriftsfeld hinzufügen.');return;}
+  allFields.forEach(f=>{
+    f.confirmed=true;
+    f.el.className='sig-field confirmed';
+    f.el.querySelector('.field-label').textContent='✔ '+f.label;
+  });
+  // Collapse
+  document.getElementById('place-body').style.display='none';
+  const names=signers.map(s=>s.name||'Unterzeichner '+s.num).join(', ');
+  const signerSummary=signers.map(s=>s.fields.length+' '+(s.name||'Unterzeichner '+s.num)).join(', ');
+  document.getElementById('place-subtitle').textContent='✅ '+allFields.length+' Unterschriften · '+signerSummary;
+  document.getElementById('place-subtitle').style.color='#2d8a4e';
+  document.getElementById('place-change-btn').style.display='block';
+  buildSendCards();
+  document.getElementById('card-send').style.display='block';
+  document.getElementById('card-send').scrollIntoView({behavior:'smooth'});
+}
+
+function reopenPlace(){
+  const body=document.getElementById('place-body');
+  if(!body)return;
+  if(body.style.display==='none'){
+    body.style.display='block';
+    document.getElementById('place-subtitle').textContent='Mehrere Unterzeichner möglich';
+    document.getElementById('place-subtitle').style.color='';
+    document.getElementById('place-change-btn').style.display='none';
+    allFields.forEach(f=>{
+      f.confirmed=false;
+      f.el.className='sig-field';
+      f.el.querySelector('.field-label').textContent='✍ '+f.label;
+    });
+    document.getElementById('card-send').style.display='none';
+  }
+}
+
+function buildSendCards(){
+  const wrap=document.getElementById('send-cards');wrap.innerHTML='';
+  signers.forEach(s=>{
+    const div=document.createElement('div');
+    div.className='send-card';div.style.borderLeftColor=s.color;
+    div.innerHTML=
+      `<div class="send-card-title" id="sctitle-${s.id}" style="color:${s.color}">E-Mail für "${s.name||'Unterzeichner '+s.num}" · ${s.fields.length} Unterschrift${s.fields.length===1?'':'en'}</div>`+
+      `<div class="grid2">`+
+        `<div class="field-row"><label>Name</label><input type="text" id="name-${s.id}" value="${s.name||''}" placeholder="Max Mustermann"></div>`+
+        `<div class="field-row"><label>E-Mail</label><input type="email" id="email-${s.id}" placeholder="kunde@beispiel.de"></div>`+
+      `</div>`+
+      `<div class="field-row"><label>E-Mail Text <button id="ai-btn-${s.id}" onclick="generateAIMessage('${s.id}')" style="margin-left:8px;background:var(--gold);color:var(--navy);border:none;padding:3px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">✨ KI-Vorschlag</button></label><textarea id="message-${s.id}" style="height:90px;resize:vertical"></textarea></div>`+
+      `<div class="btn-row">`+
+        `<button class="btn-email" style="background:${s.color}" onclick="sendSigner('${s.id}',true)">✉️ Per E-Mail senden</button>`+
+        `<button class="btn-link-only" onclick="sendSigner('${s.id}',false)">🔗 Nur Link erstellen</button>`+
+      `</div>`+
+      `<div class="link-result" id="lr-${s.id}"></div>`;
+    wrap.appendChild(div);
+  });
+}
+
+async function sendSigner(sid,doEmail){
+  const s=signers.find(s=>s.id===sid);if(!s)return;
+  const name=document.getElementById('name-'+sid)?.value||'Unterzeichner '+s.num;
+  const email=document.getElementById('email-'+sid)?.value||'';
+  if(doEmail&&!email){alert('Bitte E-Mail-Adresse eingeben.');return;}
+  const scX=pdfW/(wrapper.clientWidth||1),scY=pdfH/(canvas.offsetHeight||1);
+  const cfg=s.fields.map(f=>({label:f.label,page:f.page,x:Math.round(f.x*scX),y:Math.round(f.y*scY),w:Math.round(f.w*scX),h:Math.round(f.h*scY)}));
+  const fd=new FormData();
+  fd.append('pdf',new Blob([pdfBytes],{type:'application/pdf'}),'dokument.pdf');
+  fd.append('clientName',name);fd.append('clientEmail',email);
+  fd.append('message',document.getElementById('message-'+sid)?.value||'');
+  fd.append('sigConfig',JSON.stringify(cfg));
+  try{
+    const r=await fetch('/api/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    const el=document.getElementById('lr-'+sid);
+    el.style.display='block';
+    el.innerHTML='✅ <strong style="word-break:break-all">'+d.link+'</strong> '+
+      `<button onclick="navigator.clipboard.writeText('${d.link}')" style="margin-left:6px;background:var(--gold);color:var(--navy);border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer">Kopieren</button>`;
+    if(doEmail&&email){
+      await fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({to:email,clientName:name,message:document.getElementById('message-'+sid)?.value||'',link:d.link})});
+    }
+  }catch(e){alert('Fehler: '+e.message);}
+}
+</script>
+</body>
+</html>
