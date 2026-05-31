@@ -1,9 +1,9 @@
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const IMAP_CONFIG = {
   host: process.env.IMAP_HOST || 'imap.gmail.com',
@@ -24,19 +24,12 @@ const SCANNER_EMAIL = (process.env.SCANNER_EMAIL || 'scanner@schweizer-finanz.de
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || 'post@schweizer-finanz.de';
 
 async function analyseDocument(pdfBuffer) {
-  const response = await anthropic.messages.create({
-    model: 'claude-opus-4-8',
-    max_tokens: 768,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'document',
-          source: { type: 'base64', media_type: 'application/pdf', data: pdfBuffer.toString('base64') }
-        },
-        {
-          type: 'text',
-          text: `Du bist ein Dokumenten-Assistent für das Finanzdienstleistungsbüro Schweizer Finanz.
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const response = await model.generateContent([
+    {
+      inlineData: { data: pdfBuffer.toString('base64'), mimeType: 'application/pdf' }
+    },
+    `Du bist ein Dokumenten-Assistent für das Finanzdienstleistungsbüro Schweizer Finanz.
 Analysiere dieses eingescannte Dokument und erstelle:
 1. Einen Dateinamen nach unserem internen Schema
 2. Eine kurze Zusammenfassung (2-4 Sätze) des Inhalts auf Deutsch
@@ -59,16 +52,14 @@ Beispiele:
 - 2024-03-01_Allianz_Kuendigung_UNTERSCHRIEBEN
 - Meier_GmbH_Maklervollmacht_ENTWURF
 
-Antworte NUR als JSON:
+Antworte NUR als JSON (kein Markdown, kein Codeblock):
 {"filename": "...", "summary": "Kurze Zusammenfassung...", "reasoning": "Kurze Begründung"}`
-        }
-      ]
-    }]
-  });
+  ]);
 
   try {
-    const match = response.content[0].text.match(/\{[\s\S]*\}/);
-    const result = JSON.parse(match ? match[0] : response.content[0].text);
+    const text = response.response.text();
+    const match = text.match(/\{[\s\S]*\}/);
+    const result = JSON.parse(match ? match[0] : text);
     return result;
   } catch {
     return {

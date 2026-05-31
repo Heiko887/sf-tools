@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
@@ -12,7 +12,7 @@ const upload = multer({ dest: 'uploads/' });
 const PORT = process.env.PORT || 3000;
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || 'post@schweizer-finanz.de';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static('public'));
@@ -90,19 +90,12 @@ app.post('/api/scan-rename', upload.single('pdf'), async (req, res) => {
     const pdfBuffer = fs.readFileSync(req.file.path);
     const pdfBase64 = pdfBuffer.toString('base64');
 
-    const response = await anthropic.messages.create({
-      model: 'claude-opus-4-8',
-      max_tokens: 512,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 }
-          },
-          {
-            type: 'text',
-            text: `Du bist ein Dokumenten-Assistent für das Finanzdienstleistungsbüro Schweizer Finanz.
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const response = await model.generateContent([
+      {
+        inlineData: { data: pdfBase64, mimeType: 'application/pdf' }
+      },
+      `Du bist ein Dokumenten-Assistent für das Finanzdienstleistungsbüro Schweizer Finanz.
 Analysiere dieses eingescannte Dokument und erstelle einen Dateinamen nach unserem internen Schema.
 
 Pflichtformat: JJJJ-MM-TT_Kunde_Betreff_Status (ohne .pdf)
@@ -123,19 +116,17 @@ Beispiele:
 - 2024-03-01_Allianz_Kuendigung_UNTERSCHRIEBEN
 - Meier_GmbH_Maklervollmacht_ENTWURF
 
-Antworte NUR als JSON:
+Antworte NUR als JSON (kein Markdown, kein Codeblock):
 {"filename": "...", "reasoning": "Kurze Begründung"}`
-          }
-        ]
-      }]
-    });
+    ]);
 
     fs.unlinkSync(req.file.path);
 
     let result;
     try {
-      const jsonMatch = response.content[0].text.match(/\{[\s\S]*\}/);
-      result = JSON.parse(jsonMatch ? jsonMatch[0] : response.content[0].text);
+      const text = response.response.text();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      result = JSON.parse(jsonMatch ? jsonMatch[0] : text);
     } catch {
       result = { filename: 'Dokument_' + Date.now(), reasoning: 'Inhalt konnte nicht eindeutig erkannt werden.' };
     }
