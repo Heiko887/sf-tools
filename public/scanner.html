@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SF Tools – Scanner Umbenennen</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--navy:#0f1e35;--gold:#c9a84c;--cream:#f8f5ef;--white:#ffffff;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);min-height:100vh;}
+header{background:var(--navy);padding:20px 40px;display:flex;align-items:center;gap:14px;}
+.logo{width:36px;height:36px;background:var(--gold);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:18px;color:var(--navy);font-weight:600;}
+header h1{font-family:'Playfair Display',serif;font-size:18px;color:#fff;}
+header p{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.08em;}
+header nav{margin-left:auto;display:flex;gap:12px;}
+header nav a{font-size:12px;color:rgba(255,255,255,0.5);text-decoration:none;padding:6px 12px;border-radius:6px;transition:.2s;}
+header nav a:hover,header nav a.active{background:rgba(255,255,255,0.1);color:#fff;}
+main{max-width:720px;margin:48px auto;padding:0 24px;}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(15,30,53,.1);overflow:hidden;margin-bottom:24px;}
+.card-header{padding:20px 28px;border-bottom:1px solid var(--cream);display:flex;align-items:center;gap:12px;}
+.card-icon{width:34px;height:34px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.card-title{font-family:'Playfair Display',serif;font-size:16px;}
+.card-subtitle{font-size:12px;color:#7a7a8a;margin-top:2px;}
+.card-body{padding:24px 28px;}
+.drop{border:2px dashed #ede9e0;border-radius:12px;padding:48px 36px;text-align:center;cursor:pointer;transition:.2s;background:var(--cream);}
+.drop:hover,.drop.drag-over{border-color:var(--gold);background:#fdf8f0;}
+.drop-icon{font-size:48px;margin-bottom:12px;}
+.drop h3{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:6px;color:var(--navy);}
+.drop p{font-size:13px;color:#7a7a8a;}
+.btn{width:100%;background:var(--navy);color:#fff;border:none;padding:14px;border-radius:10px;font-family:'Playfair Display',serif;font-size:16px;cursor:pointer;margin-top:16px;transition:.2s;}
+.btn:hover{background:#1a2f4a;}
+.btn:disabled{background:#ede9e0;color:#aaa;cursor:default;}
+.btn-gold{background:var(--gold);color:var(--navy);}
+.btn-gold:hover{background:#b8942e;}
+.progress{display:none;margin-top:20px;text-align:center;padding:24px;}
+.spinner{width:40px;height:40px;border:3px solid #ede9e0;border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress p{font-size:14px;color:#7a7a8a;}
+.result-box{display:none;margin-top:20px;}
+.result-inner{background:#f0faf4;border-radius:12px;border:1px solid #b7e4c7;padding:24px;}
+.result-label{font-size:11px;font-weight:500;color:#7a7a8a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.filename-display{font-family:'Playfair Display',serif;font-size:18px;color:var(--navy);word-break:break-all;margin-bottom:4px;}
+.filename-edit{width:100%;padding:10px 14px;border:1px solid #b7e4c7;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;background:#fff;color:var(--navy);margin-top:8px;}
+.filename-edit:focus{border-color:var(--navy);}
+.reasoning{font-size:12px;color:#555;margin-top:8px;padding:10px 14px;background:#fff;border-radius:8px;border:1px solid #e0f0e8;line-height:1.5;}
+.actions{display:flex;gap:12px;margin-top:16px;}
+.actions .btn{flex:1;margin-top:0;font-size:14px;padding:11px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;font-weight:500;color:#7a7a8a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.field input{width:100%;padding:10px 14px;border:1px solid #ede9e0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--cream);}
+.field input:focus{border-color:var(--navy);background:#fff;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;transform:translateY(80px);transition:.3s;opacity:0;z-index:100;}
+.toast.show{transform:none;opacity:1;}
+.info-box{background:#f0f4ff;border:1px solid #c5d0f0;border-radius:10px;padding:16px 20px;margin-bottom:20px;font-size:13px;color:#3a4a7a;line-height:1.6;}
+.info-box strong{display:block;margin-bottom:4px;font-size:14px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">S</div>
+  <div><h1>SF Tools</h1><p>Schweizer Finanz · Scanner</p></div>
+  <nav>
+    <a href="/">Signatur</a>
+    <a href="/scanner.html" class="active">Scanner</a>
+  </nav>
+</header>
+<main>
+  <div class="info-box">
+    <strong>Scanner-PDF automatisch umbenennen</strong>
+    PDF vom Scanner hochladen – Claude liest den Inhalt und erstellt automatisch einen aussagekräftigen Dateinamen. Optional direkt per E-Mail weiterleiten.
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">🔍</div>
+      <div>
+        <div class="card-title">PDF analysieren & umbenennen</div>
+        <div class="card-subtitle">KI liest den Inhalt und schlägt einen passenden Namen vor</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="drop" id="drop" onclick="document.getElementById('pdfInput').click()">
+        <div class="drop-icon">📄</div>
+        <h3 id="dropTitle">Scanner-PDF hier ablegen</h3>
+        <p id="dropSub">oder klicken zum Auswählen · Nur PDF-Dateien</p>
+        <input type="file" id="pdfInput" accept="application/pdf" style="display:none">
+      </div>
+
+      <div class="progress" id="progress">
+        <div class="spinner"></div>
+        <p id="progressMsg">PDF wird analysiert...</p>
+      </div>
+
+      <div class="result-box" id="resultBox">
+        <div class="result-inner">
+          <div class="result-label">Vorgeschlagener Dateiname</div>
+          <div class="filename-display" id="filenameDisplay"></div>
+          <input type="text" class="filename-edit" id="filenameEdit" placeholder="Dateiname bearbeiten...">
+          <div class="reasoning" id="reasoning"></div>
+        </div>
+
+        <div style="margin-top:20px">
+          <div class="field">
+            <label>E-Mail weiterleiten an (optional)</label>
+            <input type="email" id="emailTo" placeholder="post@schweizer-finanz.de">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="downloadBtn">⬇ Herunterladen</button>
+          <button class="btn btn-gold" id="emailBtn">📧 Per E-Mail senden</button>
+        </div>
+        <button class="btn" id="resetBtn" style="margin-top:8px;background:#f5f0e8;color:#555;font-family:'DM Sans',sans-serif;font-size:13px;">Neues PDF analysieren</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentFile = null;
+let renamedBlob = null;
+
+const drop = document.getElementById('drop');
+const pdfInput = document.getElementById('pdfInput');
+
+pdfInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'application/pdf') handleFile(f);
+  else showToast('Bitte nur PDF-Dateien verwenden.');
+});
+
+async function handleFile(file) {
+  currentFile = file;
+  document.getElementById('dropTitle').textContent = file.name;
+  document.getElementById('dropSub').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('progress').style.display = 'block';
+  document.getElementById('progressMsg').textContent = 'PDF wird analysiert...';
+
+  try {
+    const fd = new FormData();
+    fd.append('pdf', file);
+    const r = await fetch('/api/scan-rename', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Fehler bei der Analyse');
+
+    document.getElementById('progress').style.display = 'none';
+    document.getElementById('resultBox').style.display = 'block';
+    document.getElementById('filenameDisplay').textContent = d.filename;
+    document.getElementById('filenameEdit').value = d.filename;
+    document.getElementById('reasoning').textContent = d.reasoning;
+    renamedBlob = file;
+  } catch (e) {
+    document.getElementById('progress').style.display = 'none';
+    showToast('Fehler: ' + e.message);
+    document.getElementById('dropTitle').textContent = 'Scanner-PDF hier ablegen';
+    document.getElementById('dropSub').textContent = 'oder klicken zum Auswählen · Nur PDF-Dateien';
+  }
+}
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  if (!renamedBlob) return;
+  const name = document.getElementById('filenameEdit').value.trim() || 'dokument.pdf';
+  const finalName = name.endsWith('.pdf') ? name : name + '.pdf';
+  const url = URL.createObjectURL(renamedBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = finalName; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Datei heruntergeladen: ' + finalName);
+});
+
+document.getElementById('emailBtn').addEventListener('click', async () => {
+  if (!renamedBlob) return;
+  const name = document.getElementById('filenameEdit').value.trim() || 'dokument.pdf';
+  const finalName = name.endsWith('.pdf') ? name : name + '.pdf';
+  const emailTo = document.getElementById('emailTo').value.trim();
+
+  const btn = document.getElementById('emailBtn');
+  btn.disabled = true; btn.textContent = '⏳ Wird gesendet...';
+
+  try {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const base64 = e.target.result.split(',')[1];
+      const r = await fetch('/api/scan-forward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64: base64, filename: finalName, emailTo })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'E-Mail Fehler');
+      showToast('E-Mail gesendet an ' + (emailTo || 'Standard-Adresse'));
+      btn.textContent = '✅ Gesendet';
+    };
+    reader.onerror = () => { throw new Error('Datei konnte nicht gelesen werden'); };
+    reader.readAsDataURL(renamedBlob);
+  } catch (err) {
+    showToast('Fehler: ' + err.message);
+    btn.disabled = false; btn.textContent = '📧 Per E-Mail senden';
+  }
+});
+
+document.getElementById('filenameEdit').addEventListener('input', e => {
+  document.getElementById('filenameDisplay').textContent = e.target.value;
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  currentFile = null; renamedBlob = null;
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('dropTitle').textContent = 'Scanner-PDF hier ablegen';
+  document.getElementById('dropSub').textContent = 'oder klicken zum Auswählen · Nur PDF-Dateien';
+  pdfInput.value = '';
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
