@@ -102,21 +102,29 @@ app.post('/api/scan-rename', upload.single('pdf'), async (req, res) => {
           },
           {
             type: 'text',
-            text: `Du bist ein Dokumenten-Assistent für ein deutsches Finanzdienstleistungsbüro.
-Analysiere dieses eingescannte Dokument und erstelle einen aussagekräftigen deutschen Dateinamen.
+            text: `Du bist ein Dokumenten-Assistent für das Finanzdienstleistungsbüro Schweizer Finanz.
+Analysiere dieses eingescannte Dokument und erstelle einen Dateinamen nach unserem internen Schema.
 
-Regeln für den Dateinamen:
-- Format: JJJJ-MM-TT_Name_Dokumenttyp_Thema (ohne .pdf am Ende)
-- Datum aus dem Dokument verwenden, falls vorhanden (sonst weglassen)
-- Name = Absender, Kunde oder Institution
-- Dokumenttyp = z.B. Rechnung, Vertrag, Brief, Bescheid, Antrag, Mahnung, Police, Kündigung
-- Thema = kurzes Stichwort zum Inhalt (max. 2 Wörter)
-- Keine Leerzeichen, stattdessen Unterstriche
+Pflichtformat: JJJJ-MM-TT_Kunde_Betreff_Status (ohne .pdf)
+
+Felder:
+- Datum (JJJJ-MM-TT): Datum aus dem Dokument. Falls kein Datum erkennbar, weglassen.
+- Kunde: Nachname_Vorname des Kunden oder Absenders. Bei Firmen: Firmenname. Kein Komma, Leerzeichen durch Unterstrich.
+- Betreff: Worum geht es? (z.B. Stromrechnung, Maklervollmacht, PKV-Angebot, Kuendigungsschreiben)
+- Status (optional): Nur wenn eindeutig erkennbar (z.B. ENTWURF, UNTERSCHRIEBEN, MAHNUNG). Sonst weglassen.
+
+Regeln:
+- Nur Unterstriche statt Leerzeichen
 - Keine Sonderzeichen außer Bindestrich und Unterstrich
-- Umlaute ersetzen: ä→ae, ö→oe, ü→ue, ß→ss
+- Umlaute: ä→ae, ö→oe, ü→ue, ß→ss
 
-Antworte NUR im JSON-Format:
-{"filename": "2024-01-15_Mustermann_Rechnung_Krankenversicherung", "reasoning": "Kurze Erklärung warum dieser Name"}`
+Beispiele:
+- 2024-08-15_Mustermann_Max_PKV-Angebot
+- 2024-03-01_Allianz_Kuendigung_UNTERSCHRIEBEN
+- Meier_GmbH_Maklervollmacht_ENTWURF
+
+Antworte NUR als JSON:
+{"filename": "...", "reasoning": "Kurze Begründung"}`
           }
         ]
       }]

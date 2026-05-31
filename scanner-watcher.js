@@ -36,22 +36,31 @@ async function analyseDocument(pdfBuffer) {
         },
         {
           type: 'text',
-          text: `Du bist ein Dokumenten-Assistent für ein deutsches Finanzdienstleistungsbüro.
+          text: `Du bist ein Dokumenten-Assistent für das Finanzdienstleistungsbüro Schweizer Finanz.
 Analysiere dieses eingescannte Dokument und erstelle:
-1. Einen aussagekräftigen deutschen Dateinamen
+1. Einen Dateinamen nach unserem internen Schema
 2. Eine kurze Zusammenfassung (2-4 Sätze) des Inhalts auf Deutsch
 
-Regeln für den Dateinamen:
-- Format: JJJJ-MM-TT_Name_Dokumenttyp_Thema (ohne .pdf)
-- Datum aus dem Dokument, falls vorhanden, sonst weglassen
-- Name = Absender, Kunde oder Institution
-- Dokumenttyp = z.B. Rechnung, Vertrag, Brief, Bescheid, Antrag, Mahnung, Police, Kuendigung
-- Thema = kurzes Stichwort (max. 2 Wörter)
-- Nur Unterstriche statt Leerzeichen, keine Sonderzeichen
+Pflichtformat: JJJJ-MM-TT_Kunde_Betreff_Status (ohne .pdf)
+
+Felder:
+- Datum (JJJJ-MM-TT): Datum aus dem Dokument. Falls kein Datum erkennbar, weglassen.
+- Kunde: Nachname_Vorname des Kunden oder Absenders. Bei Firmen: Firmenname. Kein Komma, Leerzeichen durch Unterstrich.
+- Betreff: Worum geht es? (z.B. Stromrechnung, Maklervollmacht, PKV-Angebot, Kuendigungsschreiben)
+- Status (optional): Nur wenn eindeutig erkennbar (z.B. ENTWURF, UNTERSCHRIEBEN, MAHNUNG). Sonst weglassen.
+
+Regeln:
+- Nur Unterstriche statt Leerzeichen
+- Keine Sonderzeichen außer Bindestrich und Unterstrich
 - Umlaute: ä→ae, ö→oe, ü→ue, ß→ss
 
+Beispiele:
+- 2024-08-15_Mustermann_Max_PKV-Angebot
+- 2024-03-01_Allianz_Kuendigung_UNTERSCHRIEBEN
+- Meier_GmbH_Maklervollmacht_ENTWURF
+
 Antworte NUR als JSON:
-{"filename": "...", "summary": "Kurze Zusammenfassung des Dokumentinhalts...", "reasoning": "Warum dieser Dateiname"}`
+{"filename": "...", "summary": "Kurze Zusammenfassung...", "reasoning": "Kurze Begründung"}`
         }
       ]
     }]
