@@ -16,10 +16,17 @@ const IMAP_CONFIG = {
   logger: false,
 };
 
-async function suggestFilename(pdfBuffer) {
+// Nur E-Mails von dieser Domain werden verarbeitet
+const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN || 'schweizer-finanz.de';
+
+// Scanner-Adresse: Antwort geht NICHT zurück an den Drucker, sondern an NOTIFY_EMAIL
+const SCANNER_EMAIL = (process.env.SCANNER_EMAIL || 'scanner@schweizer-finanz.de').toLowerCase();
+const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || 'post@schweizer-finanz.de';
+
+async function analyseDocument(pdfBuffer) {
   const response = await anthropic.messages.create({
     model: 'claude-opus-4-8',
-    max_tokens: 512,
+    max_tokens: 768,
     messages: [{
       role: 'user',
       content: [
@@ -30,9 +37,11 @@ async function suggestFilename(pdfBuffer) {
         {
           type: 'text',
           text: `Du bist ein Dokumenten-Assistent für ein deutsches Finanzdienstleistungsbüro.
-Analysiere dieses eingescannte Dokument und erstelle einen aussagekräftigen deutschen Dateinamen.
+Analysiere dieses eingescannte Dokument und erstelle:
+1. Einen aussagekräftigen deutschen Dateinamen
+2. Eine kurze Zusammenfassung (2-4 Sätze) des Inhalts auf Deutsch
 
-Regeln:
+Regeln für den Dateinamen:
 - Format: JJJJ-MM-TT_Name_Dokumenttyp_Thema (ohne .pdf)
 - Datum aus dem Dokument, falls vorhanden, sonst weglassen
 - Name = Absender, Kunde oder Institution
@@ -41,7 +50,8 @@ Regeln:
 - Nur Unterstriche statt Leerzeichen, keine Sonderzeichen
 - Umlaute: ä→ae, ö→oe, ü→ue, ß→ss
 
-Antworte NUR als JSON: {"filename": "...", "reasoning": "..."}`
+Antworte NUR als JSON:
+{"filename": "...", "summary": "Kurze Zusammenfassung des Dokumentinhalts...", "reasoning": "Warum dieser Dateiname"}`
         }
       ]
     }]
@@ -52,26 +62,41 @@ Antworte NUR als JSON: {"filename": "...", "reasoning": "..."}`
     const result = JSON.parse(match ? match[0] : response.content[0].text);
     return result;
   } catch {
-    return { filename: 'Scan_' + new Date().toISOString().slice(0, 10), reasoning: 'Inhalt nicht eindeutig erkennbar.' };
+    return {
+      filename: 'Scan_' + new Date().toISOString().slice(0, 10),
+      summary: 'Inhalt konnte nicht automatisch erkannt werden.',
+      reasoning: 'Analyse fehlgeschlagen.'
+    };
   }
 }
 
-async function forwardRenamed(pdfBuffer, filename, reasoning, originalFrom) {
-  const transporter = nodemailer.createTransport({
+function createTransporter() {
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: 587,
     secure: false,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
+}
 
-  const recipient = process.env.NOTIFY_EMAIL || 'post@schweizer-finanz.de';
+async function sendResult({ pdfBuffer, filename, summary, reasoning, replyTo }) {
+  const transporter = createTransporter();
   const finalName = filename.endsWith('.pdf') ? filename : filename + '.pdf';
 
   await transporter.sendMail({
     from: process.env.SMTP_USER,
-    to: recipient,
-    subject: `📄 Scanner: ${finalName}`,
-    text: `Automatisch umbenanntes Scanner-Dokument.\n\nDateiname: ${finalName}\nGrund: ${reasoning}\nOriginal-Absender: ${originalFrom || 'Scanner'}\nEmpfangen: ${new Date().toLocaleString('de-DE')}`,
+    to: replyTo,
+    subject: `📄 ${finalName}`,
+    text: [
+      `Anbei das automatisch umbenannte Dokument.`,
+      ``,
+      `Dateiname: ${finalName}`,
+      ``,
+      `Zusammenfassung:`,
+      summary,
+      ``,
+      `Empfangen: ${new Date().toLocaleString('de-DE')}`,
+    ].join('\n'),
     attachments: [{
       filename: finalName,
       content: pdfBuffer,
@@ -79,7 +104,7 @@ async function forwardRenamed(pdfBuffer, filename, reasoning, originalFrom) {
     }],
   });
 
-  console.log(`[Scanner] Weitergeleitet: ${finalName} → ${recipient}`);
+  console.log(`[Scanner] Gesendet: ${finalName} → ${replyTo}`);
 }
 
 async function processNewEmails(client) {
@@ -97,24 +122,37 @@ async function processNewEmails(client) {
       continue;
     }
 
+    const senderAddress = (parsed.from?.value?.[0]?.address || '').toLowerCase();
+    const senderDomain = senderAddress.split('@')[1] || '';
+
+    // Sicherheitsfilter: nur @schweizer-finanz.de
+    if (senderDomain !== ALLOWED_DOMAIN) {
+      console.log(`[Scanner] Ignoriert (fremde Domain): ${senderAddress}`);
+      await client.messageFlagsAdd(msg.seq, ['\\Seen']);
+      continue;
+    }
+
     const pdfs = (parsed.attachments || []).filter(a =>
       a.contentType === 'application/pdf' || a.filename?.toLowerCase().endsWith('.pdf')
     );
 
     if (pdfs.length === 0) {
-      // Kein PDF – als gelesen markieren und überspringen
       await client.messageFlagsAdd(msg.seq, ['\\Seen']);
       continue;
     }
 
-    console.log(`[Scanner] ${pdfs.length} PDF(s) in E-Mail von: ${parsed.from?.text || 'unbekannt'}`);
+    // Scanner-Adresse → Antwort an Büro-E-Mail, kein Rückversand an Drucker
+    const isScanner = senderAddress === SCANNER_EMAIL;
+    const replyTo = isScanner ? NOTIFY_EMAIL : senderAddress;
+
+    console.log(`[Scanner] ${pdfs.length} PDF(s) von ${senderAddress} → Antwort an ${replyTo}`);
 
     for (const pdf of pdfs) {
       try {
         console.log(`[Scanner] Analysiere: ${pdf.filename || 'unbenannt.pdf'}`);
-        const { filename, reasoning } = await suggestFilename(pdf.content);
-        console.log(`[Scanner] Vorgeschlagener Name: ${filename} – ${reasoning}`);
-        await forwardRenamed(pdf.content, filename, reasoning, parsed.from?.text);
+        const { filename, summary, reasoning } = await analyseDocument(pdf.content);
+        console.log(`[Scanner] Name: ${filename}`);
+        await sendResult({ pdfBuffer: pdf.content, filename, summary, reasoning, replyTo });
       } catch (e) {
         console.error(`[Scanner] Fehler bei PDF-Verarbeitung: ${e.message}`);
       }
@@ -125,7 +163,6 @@ async function processNewEmails(client) {
 }
 
 async function startWatcher() {
-  // Konfiguration prüfen
   if (!process.env.IMAP_USER || !process.env.IMAP_PASS) {
     console.log('[Scanner] IMAP_USER / IMAP_PASS nicht gesetzt – Watcher deaktiviert.');
     return;
@@ -143,10 +180,8 @@ async function startWatcher() {
 
       const lock = await client.getMailboxLock('INBOX');
       try {
-        // Beim Start vorhandene ungelesene E-Mails verarbeiten
         await processNewEmails(client);
 
-        // IMAP IDLE: blockiert bis neue E-Mail eintrifft
         while (true) {
           console.log('[Scanner] Warte auf neue E-Mails (IDLE)...');
           await client.idle();
@@ -162,7 +197,7 @@ async function startWatcher() {
 
     console.log(`[Scanner] Reconnect in ${backoff / 1000}s...`);
     await new Promise(r => setTimeout(r, backoff));
-    backoff = Math.min(backoff * 2, 60000); // max. 60s Wartezeit
+    backoff = Math.min(backoff * 2, 60000);
   }
 }
 
