@@ -67,8 +67,8 @@ main{max-width:720px;margin:48px auto;padding:0 24px;}
 </header>
 <main>
   <div class="info-box">
-    <strong>Scanner-PDF automatisch umbenennen</strong>
-    PDF vom Scanner hochladen – Claude liest den Inhalt und erstellt automatisch einen aussagekräftigen Dateinamen. Optional direkt per E-Mail weiterleiten.
+    <strong>PDF automatisch umbenennen</strong>
+    Beliebige PDF hochladen – vom Scanner, per E-Mail erhalten oder aus dem Browser gespeichert. Claude liest den Inhalt und erstellt automatisch einen aussagekräftigen Dateinamen. Optional direkt per E-Mail weiterleiten.
   </div>
 
   <div class="card">
@@ -76,14 +76,14 @@ main{max-width:720px;margin:48px auto;padding:0 24px;}
       <div class="card-icon">🔍</div>
       <div>
         <div class="card-title">PDF analysieren & umbenennen</div>
-        <div class="card-subtitle">KI liest den Inhalt und schlägt einen passenden Namen vor</div>
+        <div class="card-subtitle">Beliebige PDF hochladen – Scanner, E-Mail-Anhang, Download</div>
       </div>
     </div>
     <div class="card-body">
       <div class="drop" id="drop" onclick="document.getElementById('pdfInput').click()">
         <div class="drop-icon">📄</div>
-        <h3 id="dropTitle">Scanner-PDF hier ablegen</h3>
-        <p id="dropSub">oder klicken zum Auswählen · Nur PDF-Dateien</p>
+        <h3 id="dropTitle">PDF hier ablegen oder klicken</h3>
+        <p id="dropSub">Scanner, E-Mail-Anhang, Download – beliebige PDF-Dateien</p>
         <input type="file" id="pdfInput" accept="application/pdf" style="display:none">
       </div>
 
@@ -163,8 +163,8 @@ async function handleFile(file) {
   } catch (e) {
     document.getElementById('progress').style.display = 'none';
     showToast('Fehler: ' + e.message);
-    document.getElementById('dropTitle').textContent = 'Scanner-PDF hier ablegen';
-    document.getElementById('dropSub').textContent = 'oder klicken zum Auswählen · Nur PDF-Dateien';
+    document.getElementById('dropTitle').textContent = 'PDF hier ablegen oder klicken';
+    document.getElementById('dropSub').textContent = 'Scanner, E-Mail-Anhang, Download – beliebige PDF-Dateien';
   }
 }
 
@@ -217,8 +217,8 @@ document.getElementById('filenameEdit').addEventListener('input', e => {
 document.getElementById('resetBtn').addEventListener('click', () => {
   currentFile = null; renamedBlob = null;
   document.getElementById('resultBox').style.display = 'none';
-  document.getElementById('dropTitle').textContent = 'Scanner-PDF hier ablegen';
-  document.getElementById('dropSub').textContent = 'oder klicken zum Auswählen · Nur PDF-Dateien';
+  document.getElementById('dropTitle').textContent = 'PDF hier ablegen oder klicken';
+  document.getElementById('dropSub').textContent = 'Scanner, E-Mail-Anhang, Download – beliebige PDF-Dateien';
   pdfInput.value = '';
 });
 
