@@ -5,6 +5,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
+const { startWatcher } = require('./scanner-watcher');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -171,4 +172,7 @@ app.post('/api/scan-forward', express.json({ limit: '50mb' }), async (req, res) 
   }
 });
 
-app.listen(PORT, () => console.log(`SF Tools läuft auf Port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`SF Tools läuft auf Port ${PORT}`);
+  startWatcher();
+});
